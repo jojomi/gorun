@@ -2,6 +2,7 @@ package gorun
 
 import (
 	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 )
 
@@ -17,17 +18,20 @@ func TestRunner(t *testing.T) {
 	a.True(res.Successful())
 	a.Equal("abc", res.StdoutTrimmed())
 
-	cmd := LocalCommandFrom("python -c 'import os; os.write(1, b\"Yo\"); os.write(2, b\"def\")'")
+	workingDir := os.TempDir()
+	cmd := LocalCommandFrom("python -c 'import os; os.write(1, str.encode(os.environ[\\'GORUNTEST\\'])); os.write(2, str.encode(os.getcwd()))'")
 	//.WithShell("sh", "-c")
 	a.NotNil(cmd)
 	res = NewWithCommand(cmd).
+		AddEnv("GORUNTEST", "Yo").
+		InWorkingDir(workingDir).
 		WithoutStdout().
 		WithoutStderr().
 		LogCommand(false).
 		MustExec()
 	//fmt.Println("Stdout", res.StdoutTrimmed(), "Stderr", res.StderrTrimmed())
 	a.Equal("Yo", res.Stdout())
-	a.Equal("def", res.Stderr())
+	a.Equal(workingDir, res.Stderr())
 
 	// exit Fail
 	cmd = LocalCommandFrom("python -c 'import sys; sys.exit(1)'")

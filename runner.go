@@ -9,6 +9,8 @@ import (
 
 type Runner struct {
 	command       Command
+	workingDir    string
+	env           map[string]string
 	nonZeroExitOK bool
 	doLog         bool
 	stdout        bool
@@ -16,7 +18,9 @@ type Runner struct {
 }
 
 func New() *Runner {
-	return (&Runner{}).Reset()
+	return (&Runner{
+		env: make(map[string]string, 0),
+	}).Reset()
 }
 
 func NewLocal(localCommand string) *Runner {
@@ -57,6 +61,11 @@ func (x *Runner) WithoutStderr() *Runner {
 	return x
 }
 
+func (x *Runner) InWorkingDir(workingDir string) *Runner {
+	x.workingDir = workingDir
+	return x
+}
+
 func (x *Runner) NonZeroExitOK() *Runner {
 	x.nonZeroExitOK = true
 	return x
@@ -64,6 +73,11 @@ func (x *Runner) NonZeroExitOK() *Runner {
 
 func (x *Runner) LogCommand(value bool) *Runner {
 	x.doLog = value
+	return x
+}
+
+func (x *Runner) AddEnv(key, value string) *Runner {
+	x.env[key] = value
 	return x
 }
 
@@ -88,10 +102,12 @@ func (x *Runner) Exec() (*RunResult, error) {
 	cmd := exec.Command(x.command.Binary(), x.command.Args()...)
 	rr.Cmd = cmd
 
-	/* TODO
-	cmd.Dir = c.workingDir
-	cmd.Env = c.GetFullEnv()
-	*/
+	if x.workingDir != "" {
+		cmd.Dir = x.workingDir
+	}
+	if len(x.env) > 0 {
+		cmd.Env = x.makeEnv(x.env)
+	}
 
 	if !x.stdout {
 		cmd.Stdout = rr.stdoutBuffer
@@ -135,4 +151,12 @@ func (x *Runner) validate() error {
 		return fmt.Errorf("missing command, use WithCommand")
 	}
 	return nil
+}
+
+func (x *Runner) makeEnv(env map[string]string) []string {
+	result := make([]string, 0, len(env))
+	for k, v := range env {
+		result = append(result, fmt.Sprintf("%s=%s", k, v))
+	}
+	return result
 }
