@@ -45,14 +45,21 @@ func (x RunResult) Failed() bool {
 	return !x.Successful()
 }
 
+// CombinedOutput returns a string representation of all the output of the process denoted
+// by this struct.
+func (x RunResult) CombinedOutput() (string, error) {
+	out, err := x.Cmd.CombinedOutput()
+	return string(out), err
+}
+
 // MustCombinedOutput returns a string representation of all the output of the process denoted
 // by this struct.
 func (x RunResult) MustCombinedOutput() string {
-	out, err := x.Cmd.CombinedOutput()
+	out, err := x.CombinedOutput()
 	if err != nil {
 		panic(err)
 	}
-	return string(out)
+	return out
 }
 
 // Stdout returns a string representation of the output of the process denoted
