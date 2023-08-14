@@ -12,21 +12,23 @@ import (
 )
 
 type RunResult struct {
-	command       Command
-	nonZeroExitOK bool
-	err           error
-	Cmd           *exec.Cmd
-	Process       *os.Process
-	ProcessState  *os.ProcessState
-	ProcessError  error
-	stdoutBuffer  *bytes.Buffer
-	stderrBuffer  *bytes.Buffer
+	command        Command
+	nonZeroExitOK  bool
+	err            error
+	Cmd            *exec.Cmd
+	Process        *os.Process
+	ProcessState   *os.ProcessState
+	ProcessError   error
+	stdoutBuffer   *bytes.Buffer
+	stderrBuffer   *bytes.Buffer
+	combinedBuffer *bytes.Buffer
 }
 
 func NewRunResult() *RunResult {
 	p := &RunResult{}
 	p.stdoutBuffer = bytes.NewBuffer(make([]byte, 0, 100))
 	p.stderrBuffer = bytes.NewBuffer(make([]byte, 0, 100))
+	p.combinedBuffer = bytes.NewBuffer(make([]byte, 0, 100))
 	return p
 }
 
@@ -47,19 +49,14 @@ func (x RunResult) Failed() bool {
 
 // CombinedOutput returns a string representation of all the output of the process denoted
 // by this struct.
-func (x RunResult) CombinedOutput() (string, error) {
-	out, err := x.Cmd.CombinedOutput()
-	return string(out), err
+func (x RunResult) CombinedOutput() string {
+	return x.combinedBuffer.String()
 }
 
-// MustCombinedOutput returns a string representation of all the output of the process denoted
+// CombinedOutputTrimmed returns a string representation of all the output of the process denoted
 // by this struct.
-func (x RunResult) MustCombinedOutput() string {
-	out, err := x.CombinedOutput()
-	if err != nil {
-		panic(err)
-	}
-	return out
+func (x RunResult) CombinedOutputTrimmed() string {
+	return strings.TrimSpace(x.stdoutBuffer.String())
 }
 
 // Stdout returns a string representation of the output of the process denoted
