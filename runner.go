@@ -107,7 +107,7 @@ func (x *Runner) Exec() (*RunResult, error) {
 		cmd.Dir = x.workingDir
 	}
 	if len(x.env) > 0 {
-		cmd.Env = x.makeEnv(x.env)
+		cmd.Env = append(os.Environ(), x.makeEnv(x.env)...)
 	}
 
 	if !x.stdout {
