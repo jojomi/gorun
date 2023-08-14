@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 type Runner struct {
@@ -110,15 +111,15 @@ func (x *Runner) Exec() (*RunResult, error) {
 	}
 
 	if !x.stdout {
-		cmd.Stdout = rr.stdoutBuffer
+		cmd.Stdout = io.MultiWriter(rr.stdoutBuffer, rr.combinedBuffer)
 	} else {
-		cmd.Stdout = io.MultiWriter(os.Stdout, rr.stdoutBuffer)
+		cmd.Stdout = io.MultiWriter(os.Stdout, rr.stdoutBuffer, rr.combinedBuffer)
 	}
 
 	if !x.stderr {
-		cmd.Stderr = rr.stderrBuffer
+		cmd.Stderr = io.MultiWriter(rr.stderrBuffer, rr.combinedBuffer)
 	} else {
-		cmd.Stderr = io.MultiWriter(os.Stderr, rr.stderrBuffer)
+		cmd.Stderr = io.MultiWriter(os.Stderr, rr.stderrBuffer, rr.combinedBuffer)
 	}
 
 	cmd.Stdin = os.Stdin
@@ -126,6 +127,7 @@ func (x *Runner) Exec() (*RunResult, error) {
 	// logging
 	if x.doLog {
 		fmt.Println(x.command.String())
+		fmt.Println("ENV: " + strings.Join(x.makeEnv(x.env), ", "))
 	}
 
 	err = cmd.Start()
