@@ -1,6 +1,7 @@
 package gorun
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -19,25 +20,58 @@ func TestRunner(t *testing.T) {
 	a.Equal("abc", res.StdoutTrimmed())
 }
 
-func TestRunnerOutputStreamsAndEnv(t *testing.T) {
+func TestRunnerOutputStreams(t *testing.T) {
 	a := assert.New(t)
 
 	workingDir, err := os.Getwd()
 	a.Nil(err)
-	cmd := LocalCommandFrom("python3 -c 'import os; os.write(1, str.encode(os.environ[\\'GORUNTEST\\'] + \"lo\")); os.write(2, str.encode(os.getcwd()))'")
-	//.WithShell("sh", "-c")
+	cmd := LocalCommandFrom("python3 -c 'import os; os.write(1, str.encode(\"lo\")); os.write(2, str.encode(os.getcwd()))'")
 	a.NotNil(cmd)
 	res := NewWithCommand(cmd).
-		AddEnv("GORUNTEST", "Yo").
 		WithoutStdout().
 		WithoutStderr().
 		InWorkingDir(workingDir).
 		LogCommand(true).
 		MustExec()
 	//fmt.Println("Stdout", res.StdoutTrimmed(), "Stderr", res.StderrTrimmed())
-	a.Equal("Yolo", res.Stdout())
+	a.Equal("lo", res.Stdout())
 	a.Equal(workingDir, res.Stderr())
-	a.Equal("Yolo"+workingDir, res.CombinedOutput())
+	a.Equal("lo"+workingDir, res.CombinedOutput())
+}
+
+func TestRunnerEnv(t *testing.T) {
+	a := assert.New(t)
+
+	cmd := LocalCommandFrom("python3 -c 'import os; os.write(1, str.encode(os.environ[\\'GORUNTEST\\'] + \"lo\")); os.write(2, str.encode(os.environ[\\'PATH\\']));'")
+	a.NotNil(cmd)
+	res := NewWithCommand(cmd).
+		AddEnv("GORUNTEST", "Yo").
+		WithoutStdout().
+		WithoutStderr().
+		LogCommand(true).
+		MustExec()
+	fmt.Println("Stdout", res.StdoutTrimmed(), "Stderr", res.StderrTrimmed())
+	a.True(res.Successful())
+	a.Equal("Yolo", res.Stdout())
+	a.NotEqual("", res.StderrTrimmed())
+}
+
+func TestRunnerReset(t *testing.T) {
+	a := assert.New(t)
+
+	cmd := LocalCommandFrom("echo 'abc'")
+	a.NotNil(cmd)
+	runner := NewWithCommand(cmd).
+		WithoutStdout().
+		WithoutStderr()
+	res := runner.MustExec()
+
+	res = runner.Reset().WithCommand(LocalCommandFrom("echo 'dev'")).MustExec()
+
+	fmt.Println("Stdout", res.StdoutTrimmed(), "Stderr", res.StderrTrimmed())
+	a.True(res.Successful())
+	a.Equal("dev", res.StdoutTrimmed())
+	a.Equal("", res.StderrTrimmed())
 }
 
 func TestExitCodes(t *testing.T) {
