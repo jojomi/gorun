@@ -1,7 +1,6 @@
 package gorun
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -15,7 +14,6 @@ func TestRunner(t *testing.T) {
 		WithoutStdout().
 		Exec()
 	a.Nil(err)
-	//fmt.Println("Stdout", res.StdoutTrimmed(), "Stderr", res.StderrTrimmed())
 	a.True(res.Successful())
 	a.Equal("abc", res.StdoutTrimmed())
 }
@@ -25,15 +23,13 @@ func TestRunnerOutputStreams(t *testing.T) {
 
 	workingDir, err := os.Getwd()
 	a.Nil(err)
-	cmd := LocalCommandFrom("python3 -c 'import os; os.write(1, str.encode(\"lo\")); os.write(2, str.encode(os.getcwd()))'")
+	cmd := LocalCommandFrom("python3 -c 'import os, time; os.write(1, str.encode(\"lo\")); time.sleep(0.1); os.write(2, str.encode(os.getcwd()))'")
 	a.NotNil(cmd)
 	res := NewWithCommand(cmd).
 		WithoutStdout().
 		WithoutStderr().
 		InWorkingDir(workingDir).
-		LogCommand(true).
 		MustExec()
-	//fmt.Println("Stdout", res.StdoutTrimmed(), "Stderr", res.StderrTrimmed())
 	a.Equal("lo", res.Stdout())
 	a.Equal(workingDir, res.Stderr())
 	a.Equal("lo"+workingDir, res.CombinedOutput())
@@ -48,9 +44,7 @@ func TestRunnerEnv(t *testing.T) {
 		AddEnv("GORUNTEST", "Yo").
 		WithoutStdout().
 		WithoutStderr().
-		LogCommand(true).
 		MustExec()
-	fmt.Println("Stdout", res.StdoutTrimmed(), "Stderr", res.StderrTrimmed())
 	a.True(res.Successful())
 	a.Equal("Yolo", res.Stdout())
 	a.NotEqual("", res.StderrTrimmed())
@@ -68,7 +62,6 @@ func TestRunnerReset(t *testing.T) {
 
 	res = runner.Reset().WithCommand(LocalCommandFrom("echo 'dev'")).MustExec()
 
-	fmt.Println("Stdout", res.StdoutTrimmed(), "Stderr", res.StderrTrimmed())
 	a.True(res.Successful())
 	a.Equal("dev", res.StdoutTrimmed())
 	a.Equal("", res.StderrTrimmed())
@@ -81,16 +74,13 @@ func TestExitCodes(t *testing.T) {
 	cmd := LocalCommandFrom("python3 -c 'import sys; sys.exit(1)'")
 	a.NotNil(cmd)
 	res := NewWithCommand(cmd).
-		LogCommand(false).
 		MustExec()
-	//fmt.Println("Stdout", res.StdoutTrimmed(), "Stderr", res.StderrTrimmed())
 	a.True(res.Failed())
 	a.False(res.Successful())
 
 	// NonZeroExitOK
 	res = NewWithCommand(cmd).
 		NonZeroExitOK().
-		LogCommand(false).
 		MustExec()
 	a.False(res.Failed())
 	err := res.CombinedError()
@@ -105,9 +95,7 @@ func TestInvalidCommand(t *testing.T) {
 	cmd := LocalCommandFrom("python-was-not-here")
 	a.NotNil(cmd)
 	res := NewWithCommand(cmd).
-		LogCommand(false).
 		MustExec()
-	//fmt.Println("Stdout", res.StdoutTrimmed(), "Stderr", res.StderrTrimmed())
 	a.True(res.Failed())
 	a.NotNil(res.Error())
 	err := res.CombinedError()
